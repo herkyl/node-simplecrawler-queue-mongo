@@ -4,13 +4,15 @@ _        = require "lodash"
 getItem  = require "./QueueItem"
 
 module.exports = class MongoQueue
-  constructor: (mongo, @crawler) ->
+  constructor: (mongo, db, @crawler) ->
     console.log "Initializing mongo queue for #{@crawler.name}"
+    @hosts = db.get 'hosts'
+
     @Item = getItem mongo, @crawler.name
 
     # Update status of items in db on crawler events
     @updateStatus = (item, status) ->
-      console.log "#{status} \t #{item.url}"
+      #console.log "#{status} \t\t #{item.url}"
       item.set {status}
       item.save (error) ->
         if error then throw error
@@ -82,13 +84,34 @@ module.exports = class MongoQueue
   get: (id, callback) ->
     @Item.findById id, callback
 
+  bestHost: (callback) ->
+    @Item.aggregate [
+      { $match: { status: { $in: ['fetched', 'queued'] } } },
+      { $group: { _id: { host: '$host', status: '$status' }, total: { $sum: 1 } } },
+      { $project: { _id: 0, host: '$_id.host', status: '$_id.status', total: 1 } },
+    ], (error, replies) ->
+      best = null
+      for reply in replies
+        if reply.status is 'queued'
+          fetched = _.findWhere({status: 'fetched', host: reply.host})
+          totalFetched = if fetched then fetched.total else 0
+          if best is null or totalFetched < best.total
+            best = reply
+      callback best
+
   # Get first unfetched item in the queue (and return its index)
   oldestUnfetchedItem: (callback) ->
     query =
       crawler: @crawler.name
       status : 'queued'
 
-    @Item.findOneAndUpdate query, status: 'spooled', callback
+
+    @bestHost (best) =>
+      if best
+        query.host = best.host
+        console.log 'BEST HOST', best.host
+      @Item.findOneAndUpdate query, status: 'spooled', callback
+
 
   # Gets the maximum total request time, request latency, or download time
   max: (statisticname, callback) ->

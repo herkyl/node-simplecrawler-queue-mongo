@@ -32,6 +32,7 @@
   "author": "Tadeusz Łazurski <tadeusz@lazurski.pl> (http://lazurski.pl/)",
   "license": "GPL 3",
   "dependencies": {
-    "lodash": "^2.4.1"
+    "lodash": "^2.4.1",
+    "mongoose": "^4.1.12"
   }
 }
