@@ -109,7 +109,7 @@ module.exports = class MongoQueue
     @bestHost (best) =>
       if best
         query.host = best.host
-        console.log 'BEST HOST', best.host
+        #console.log 'BEST HOST', best.host
       @Item.findOneAndUpdate query, status: 'spooled', callback
 
 
