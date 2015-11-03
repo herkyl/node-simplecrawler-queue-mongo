@@ -1,11 +1,13 @@
 # TODO: We assume that there is a connection to mongo established by crawler app
 
-_        = require "lodash"
-getItem  = require "./QueueItem"
+_ = require "lodash"
+getItem = require "./QueueItem"
+ShortHostItem = require './ShortHostItem'
 
 module.exports = class MongoQueue
   constructor: (mongo, @crawler) ->
     console.log "Initializing mongo queue for #{@crawler.name}"
+    @shortHosts = {}
     @Item = getItem mongo, @crawler.name
 
     # Update status of items in db on crawler events
@@ -42,6 +44,21 @@ module.exports = class MongoQueue
 
   # Add item to queue
   add: (protocol, host, port, path, callback) ->
+    callback = if callback and callback instanceof Function then callback else ->
+
+    hostParts = host.split '.'
+    shortHost = if hostParts.length is 3
+      hostParts[1..2].join '.'
+    else
+      host
+
+    count = @shortHosts[shortHost] or 0
+    console.log @shortHosts
+    if count >= 10
+      return callback null, 0
+    else
+      @shortHosts[shortHost] = count + 1
+
     data = {
       protocol
       host
