@@ -53,7 +53,6 @@ module.exports = class MongoQueue
       host
 
     count = @shortHosts[shortHost] or 0
-    console.log @shortHosts
     if count >= 10
       return callback null, 0
     else
